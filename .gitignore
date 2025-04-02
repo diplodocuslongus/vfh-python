@@ -3,3 +3,4 @@ __pycache__/
 .ipynb_*
 *.png
 *.tex
+*.swp
