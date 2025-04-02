@@ -1,3 +1,4 @@
+# to use with the test/test.py, standalone for animation
 # /*
 # * NOTE: it is important to distinguish between the same variables at
 # * t versus t-1. Instance variables are shared across two timesteps.
@@ -10,7 +11,6 @@ from matplotlib.widgets import Button
 import math
 import time
 import numpy as np
-from IPython import display
 import warnings
 import itertools
 
@@ -79,11 +79,11 @@ class Robot:
         self.update_velocity()
         self.update_location() # position: t => t+1
 
-    def loop(self, num_steps, draw=True,anim_plot=True):
+    def loop(self, num_steps, draw=True):
         plt.ion() # enable interactive plotting mode
-
         if draw == True:
             figure, (simulation_plot, polar_plot, histogram_grid_plot) = plt.subplots(1, 3, figsize=(18, 6))
+            # time.sleep(1)
 
             # 1. Plot the simulation
             obstacles_x, obstacles_y = self.path_planner.histogram_grid.get_obstacles() # get a list of points [(x1, y1), (x2, y2), ...]
@@ -126,12 +126,23 @@ class Robot:
             # print(*histogram_grid_active_region, sep='\n')
             histogram_grid_plot.clear()
             histogram_grid_plot.matshow(histogram_grid_active_region, origin="upper")
+            print('first plot')
+            # plt.show(block=True)
+            plt.show(block=False)
+            # plt.show()
+            time.sleep(1)
 
 
         for i in range(num_steps):
 
             self.step()
             if draw == True:
+                # plt.gcf()
+                # plt.gca()
+                # figure.clf()
+                # time.sleep(1)
+                # plt.cla()
+                # plt.clf()
 
                 # 1. Replot the simulation
                 obstacles_x, obstacles_y = self.path_planner.histogram_grid.get_obstacles()
@@ -173,9 +184,18 @@ class Robot:
 
 
                 # 4. Actually display the plots
-                if anim_plot:
-                    display.clear_output(wait=True) # NOTE: Uncomment this for animation. Comment this out if you want to see all steps.
-                display.display(plt.gcf())
+                # plt.gcf()
+                # plt.pause(0.1)
+                # plt.show()
+                # figure.show() 
+                # figure.canvas.draw()
+                # plt.show(block=True)
+
+
+
+
+                time.sleep(0.21)
+                # display.display(plt.gcf())
 
 
     def print_histogram(self):
