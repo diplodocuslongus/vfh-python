@@ -21,19 +21,21 @@ from lib.histogram_grid import HistogramGrid
 from lib.polar_histogram import PolarHistogram
 
 class Robot:
-    def __init__(self, histogram_grid, polar_histogram, init_location, target_location, init_speed):
+    def __init__(self, histogram_grid, polar_histogram, init_location, target_location, init_velocity):
         self.path_planner = PathPlanner(histogram_grid, polar_histogram, init_location, target_location)
         self.target_location = target_location
         self.location = init_location
-        self.speed = init_speed
+        self.velocity = (init_velocity,init_velocity)
+        # self.velocity = init_velocity
+        self.init_velocity = init_velocity
         self.update_angle()
 
 
     @classmethod
-    def from_map(cls, map_fname, init_location, target_location, init_speed, active_region_dimension, resolution, num_bins):
+    def from_map(cls, map_fname, init_location, target_location, init_velocity, active_region_dimension, resolution, num_bins):
         histogram_grid = HistogramGrid.from_map(map_fname, active_region_dimension, resolution, init_location)
         polar_histogram = PolarHistogram(num_bins)
-        return cls(histogram_grid, polar_histogram, init_location, target_location, init_speed)
+        return cls(histogram_grid, polar_histogram, init_location, target_location, init_velocity)
 
 
     def update_angle(self):
@@ -43,13 +45,15 @@ class Robot:
         self.continuous_robot_to_target_angle = continuous_robot_to_target_angle
 
 
-    def set_speed(self, speed):
-        self.speed = speed
+    # def set_velocity(self, velocity):
+    #     self.velocity = velocity
 
 
     def update_velocity(self):
         angle_radian = self.angle * math.pi/180
-        self.velocity = (self.speed * math.cos(angle_radian), self.speed * math.sin(angle_radian))
+        self.velocity = (self.init_velocity * math.cos(angle_radian),self.init_velocity* math.sin(angle_radian))
+        # self.velocity = (self.velocity[0] * math.cos(angle_radian), self.velocity[1] * math.sin(angle_radian))
+        # self.velocity = (self.velocity * math.cos(angle_radian), self.velocity * math.sin(angle_radian))
 
     def update_location(self):
         angle_radian = self.angle * math.pi/180
@@ -66,13 +70,13 @@ class Robot:
 
     # Main function per timestep
     # 1. Get angle from nothing at t=0, then
-    # 2. get speed from nothing at t=0.
+    # 2. get velocity from nothing at t=0.
     # 3. Given position at 0, draw simulation at t=0,
     # 4. Now move from t=0 to t=1 by only updating the robot's position.
     def step(self, draw=True):
         self.print_histogram()
         self.update_angle() # angle: Null (or optionally, t-1) => t
-        # self.set_speed() # speed: Null (or optionally, t-1) => t
+        # self.set_velocity() # velocity: Null (or optionally, t-1) => t
         print("robot: step: best angle =", self.angle )
         self.update_velocity()
         self.update_location() # position: t => t+1
@@ -96,6 +100,13 @@ class Robot:
                 )
             )
             simulation_plot.invert_yaxis()
+            # Initialize quiver plot for direction vector
+            quiver_plot = simulation_plot.quiver(*self.location, 0, 0, color='red',angles='xy', scale=10)
+
+            # Initialize path plot
+            path_x, path_y = [self.location[0]], [self.location[1]]
+            path_line, = simulation_plot.plot(path_x, path_y, color='blue', linestyle='-', linewidth=1)
+
 
             # Initialize polar histogram plot
             num_bins = self.path_planner.polar_histogram.num_bins
@@ -135,6 +146,17 @@ class Robot:
                 # paths_robot.set_data(self.location[0], self.location[1])
                 active_region_min_x, active_region_min_y, active_region_max_x, active_region_max_y = self.path_planner.histogram_grid.get_active_region(self.location)
                 rectangle.set_bounds(active_region_min_x, active_region_min_y, active_region_max_x - active_region_min_x, active_region_max_y - active_region_min_y)
+                # Update quiver plot
+                direction_x = np.cos(np.radians(self.angle))
+                direction_y = np.sin(np.radians(self.angle))
+                quiver_plot.set_UVC(direction_x, direction_y)
+                quiver_plot.set_offsets(self.location)
+
+                # Update path plot
+                path_x.append(self.location[0])
+                path_y.append(self.location[1])
+                path_line.set_data(path_x, path_y)
+
 
                 # Update polar histogram plot
                 num_bins = self.path_planner.polar_histogram.num_bins
@@ -143,9 +165,8 @@ class Robot:
                 bin_percentages = [1.0 / num_bins for angle, certainty in polar_histogram_by_angle]
                 bin_certainties = [certainty for angle, certainty in polar_histogram_by_angle]
                 colors = ['blue' if certainty < valley_threshold else 'red' for angle, certainty in polar_histogram_by_angle]
-                labels = [angle for angle, certainty in polar_histogram_by_angle]
+                labels = [f'{int(angle)}' for angle, certainty in polar_histogram_by_angle]
                 generator = enumerate(polar_histogram_by_angle)
-
                 polar_plot.clear()
                 polar_plot.pie(bin_percentages, colors=colors, labels=labels, startangle=0, autopct=make_autopct(bin_percentages))
 
@@ -156,7 +177,7 @@ class Robot:
 
                 return paths_robot, rectangle, pie_patches, histogram_grid_plot
 
-            ani = animation.FuncAnimation(fig, animate, frames=num_steps, interval=200, blit=False) # Adjust interval as needed
+            ani = animation.FuncAnimation(fig, animate, frames=num_steps, interval=300, blit=False) # Adjust interval as needed
             plt.show()
 
         else:

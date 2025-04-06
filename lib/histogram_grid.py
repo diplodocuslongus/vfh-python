@@ -22,6 +22,7 @@ class HistogramGrid:
     def from_map(cls, map_fname, active_region_dimension, resolution, robot_location):
         """
         Args:
+            map_fname: text file containing the description of the map of obstacles
             active_region_dimension: a tuple (x, y).
         """
         with open(map_fname, 'r') as f:
@@ -34,6 +35,7 @@ class HistogramGrid:
         # print(*lines, sep="\n")
         dimension = (len(lines[0]), len(lines))
         hg = cls(dimension, resolution, robot_location, active_region_dimension)
+        # print(f'histogram_grid: from_map: histogram_grid={hg.histogram_grid}')
         hg.histogram_grid = lines
         return hg
 

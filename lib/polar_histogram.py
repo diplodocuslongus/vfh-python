@@ -32,6 +32,12 @@ class PolarHistogram:
         self.bin_width = 360/num_bins
         self._polar_histogram = [0] * num_bins
 
+    def __str__(self):
+        string = 'index, angle, certainty\n'
+        for i, certainty in enumerate(self._polar_histogram):
+            string += str(i) + ' ' + str(i * self.bin_width) + ' ' + str(certainty) + '\n'
+        return string
+
 
     def wrap(self, bin_index):
         """Helper method for covering out of bounds bin_index."""
@@ -71,13 +77,14 @@ class PolarHistogram:
         return (bin_index + 0.5) * self.bin_width
 
 
+    # TODO: this is never called, needed?
     def get_certainty_from_angle(self, angle):
         """Returns the value of the histogram for the specified bin."""
         return self.get_certainty(self.get_bin_index_from_angle(angle))
 
 
     def add_certainty_to_bin_at_angle(self, angle, delta_certainty):
-        """Adds the passed value to the current value of the histogr1am grid."""
+        """Adds the passed value to the current value of the histogram grid."""
         bin_index = self.get_bin_index_from_angle(angle)
         # print("polar_histogram: adding certainty %s to bin #%s = %s" % (delta_certainty, bin_index, angle))
         self._polar_histogram[bin_index] += delta_certainty
@@ -91,12 +98,6 @@ class PolarHistogram:
             smoothed_histogram[k_i] = sum([(l - abs(k_i-l_i)) * self.get(l_i) for l_i in range(k_i-l+1, k_i+l)]) / (2*l+1)
 
         self._polar_histogram = smoothed_histogram
-
-    def __str__(self):
-        string = 'index, angle, certainty\n'
-        for i, certainty in enumerate(self._polar_histogram):
-            string += str(i) + ' ' + str(i * self.bin_width) + ' ' + str(certainty) + '\n'
-        return string
 
     def get_angle_certainty(self):
         """Instead of (bin_index, certainty), return (angle, certainty) pairs."""
