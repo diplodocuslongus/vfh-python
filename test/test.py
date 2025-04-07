@@ -1,3 +1,5 @@
+# standalone plot of the robot navigating the map
+
 import matplotlib.pyplot as plt
 import sys
 sys.path.insert(1, '..')
@@ -17,7 +19,7 @@ num_bins = 1*36 # each bin is 360/num_bins degrees
 target_location = (50, 50)
 
 # Robot Params
-init_location = (1, 1)
+init_location = (10, 10)
 init_velocity = 1
 
 robot = Robot.from_map(map_fname, init_location, 

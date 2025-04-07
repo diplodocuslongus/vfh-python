@@ -1,16 +1,15 @@
 """
 polar_histogram.py
 
-A polar histogram means this, assuming bin_width=36
-(therefore num_bins = 360 / 36 = 10):
+A polar histogram is defined as follows, assuming bin_width=36
+    (num_bins = 360 / 36 = 10):
 
-
-index, corresponding_angle, histogram_angle
-0, 0, 123
-1, 36, 0
-2, 72, 30
-...
-9, 324, 0
+    index, corresponding_angle, histogram_angle
+    0, 0, 123
+    1, 36, 0
+    2, 72, 30
+    ...
+    9, 324, 0
 
 (equation: i * bin_width = angle)
 
@@ -63,7 +62,7 @@ class PolarHistogram:
         self._polar_histogram[bin_index] = value
 
     def get_bin_index_from_angle(self, angle):
-        """Returns index 0 <= i < nBins that corresponds to a. "Wraps" a around histogram."""
+        """Returns index 0 <= i < nBins that corresponds to a. "Wraps" around histogram."""
         while angle < 0:
             angle += 360
         while angle > 360:
@@ -86,23 +85,38 @@ class PolarHistogram:
     def add_certainty_to_bin_at_angle(self, angle, delta_certainty):
         """Adds the passed value to the current value of the histogram grid."""
         bin_index = self.get_bin_index_from_angle(angle)
-        # print("polar_histogram: adding certainty %s to bin #%s = %s" % (delta_certainty, bin_index, angle))
         self._polar_histogram[bin_index] += delta_certainty
 
 
     def smooth_histogram(self, l):
         """Smoothing function that smooths the values of the histogram using a moving average."""
         smoothed_histogram = [0] * self.num_bins
+        print(f'smooth_histo, smooth parameter l={l}')
         for k_i in range(self.num_bins):
+            print(k_i)
+            print(f'{[self.get(l_i) for l_i in range(k_i-l+1, k_i+l)]}')
 
             smoothed_histogram[k_i] = sum([(l - abs(k_i-l_i)) * self.get(l_i) for l_i in range(k_i-l+1, k_i+l)]) / (2*l+1)
 
+        print(f'smooth_histo result, {smoothed_histogram}')
         self._polar_histogram = smoothed_histogram
 
-    def get_angle_certainty(self):
+    # new: shift (wraps) the histogram around a desired angle (ex: target direction)
+    def rotate_histogram(self, desired_angle=90):
+        bin_size = 360 // len(self._polar_histogram)
+        shift = desired_angle // bin_size
+        return self._polar_histogram[shift:] + self._polar_histogram[:shift]
+
+    def get_angle_certainty_orig(self):
         """Instead of (bin_index, certainty), return (angle, certainty) pairs."""
         return [(i * self.bin_width, certainty) for i, certainty in enumerate(self._polar_histogram)]
 
+    def get_angle_certainty(self):
+        """Instead of (bin_index, certainty), return (angle, certainty) pairs."""
+        shifted_polar_histo = self.rotate_histogram(90)
+        # shifted_polar_histo = self.rotate_histogram(self._polar_histogram,90)
+        return [(i * self.bin_width, certainty) for i, certainty in enumerate(shifted_polar_histo)]
+        # return [(i * self.bin_width, certainty) for i, certainty in enumerate(self._polar_histogram)]
 
     def reset(self):
         self._polar_histogram = [0] * self.num_bins
