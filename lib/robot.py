@@ -1,3 +1,8 @@
+# TODO
+# see why certainty is incorrect in histogram_grid, function
+# get_certainty_at_discrete_point
+# in the current robot.py, the histogram_grid_active_region does show the correct presence of the obstacle. There are some rounding errors!
+# Anyway, there's a mismatch between the histogram_grid_active_region and what is returned by get_certainty_at_discrete_point to solve
 # /*
 # * NOTE: it is important to distinguish between the same variables at
 # * t versus t-1. Instance variables are shared across two timesteps.
@@ -22,7 +27,7 @@ from lib.polar_histogram import PolarHistogram
 class Robot:
     def __init__(self, histogram_grid, polar_histogram, init_location, target_location, init_speed):
         # CHANGED: we shouldn't need polar_histogram, only histogram_grid
-        self.path_planner = PathPlanner(histogram_grid, polar_histogram, init_location, target_location,mov_avg_l=1)
+        self.path_planner = PathPlanner(histogram_grid, polar_histogram, init_location, target_location,mov_avg_l=5)
         self.target_location = target_location
         self.location = init_location
         self.discrete_location = init_location
@@ -64,7 +69,8 @@ class Robot:
 
         # Why does path_planner need discrete location?
         self.discrete_location = self.path_planner.histogram_grid.continuous_point_to_discrete_point(self.location)
-        print("robot: discrete_location =", self.discrete_location)
+        print(f"robot: location,discrete_location = ",end="")
+        print(f'{self.location,self.discrete_location}')
         self.path_planner.set_robot_location(self.discrete_location)
 
 
@@ -140,12 +146,12 @@ class Robot:
 
             # 3. Plot the valley
             histogram_grid_active_region = self.path_planner.histogram_grid.get_histogram_grid_active_region(active_region_min_x, active_region_min_y, active_region_max_x, active_region_max_y)
-            # print('active region histogram =')
-            # print(*histogram_grid_active_region, sep='\n')
+            print('active region histogram =')
+            print(*histogram_grid_active_region, sep='\n')
             histogram_grid_plot.clear()
             histogram_grid_plot.matshow(histogram_grid_active_region, origin="upper")
             if anim_plot:
-                display.clear_output(wait=True) # NOTE: Uncomment this for animation. Comment this out if you want to see all steps.
+                display.clear_output(wait=True) # Uncomment for animation or Comment to see all steps.
             display.display(plt.gcf())
 
 
@@ -155,25 +161,32 @@ class Robot:
             if draw == True:
 
                 # 1. Replot the simulation
+                # TODO: no need to get the obstacles at every steps! Do it once and for all(?)
                 obstacles_x, obstacles_y = self.path_planner.histogram_grid.get_obstacles()
+                simulation_plot.clear()
                 paths_robot = simulation_plot.scatter(*self.location, color='blue')
                 paths_target = simulation_plot.scatter(*self.path_planner.target_location, color='green')
                 paths_obstacles = simulation_plot.scatter(obstacles_x, obstacles_y, color='red')
                 active_region_min_x, active_region_min_y, active_region_max_x, active_region_max_y = self.path_planner.histogram_grid.get_active_region(self.location)
                 rectangle.set_bounds(active_region_min_x, active_region_min_y, active_region_max_x - active_region_min_x, active_region_max_y - active_region_min_y)
                 # Draw direction vector from current location to target
-                angle_to_target = math.atan2(self.discrete_location[1]-self.target_location[1],self.discrete_location[0]-self.target_location[0])
+                # angle_to_target = math.atan2(self.target_location[1]-self.discrete_location[1],self.target_location[0]-self.discrete_location[0])
+                angle_to_target = self.path_planner.histogram_grid.get_angle_between_discrete_points( self.discrete_location, self.target_location)
+                angle_to_target = self.angle
+                print(f'INFO: angle_to_target = {angle_to_target}')
+                # angle_to_target = self.path_planner.histogram_grid.get_angle_between_discrete_points( self.target_location, self.discrete_location)
                 # direction_vector = np.array([np.sin(angle_to_target), np.cos(angle_to_target)])
-                direction_vector = np.array([np.cos(angle_to_target), np.sin(angle_to_target)])
+                direction_vector = np.array([np.cos(angle_to_target*3.14/180.0), np.sin(angle_to_target*3.14/180.0)])
                 simulation_plot.quiver(self.discrete_location[0], self.discrete_location[1],  direction_vector[0], direction_vector[1], scale = 5,angles = 'xy', color='g')
                 # Draw adjustment direction vector taking into account obstacle
                 direction_vector = np.array([np.cos(self.angle*3.14/180.0), np.sin(self.angle*3.14/180.0)])
-                simulation_plot.quiver(self.discrete_location[0], self.discrete_location[1],  direction_vector[0], direction_vector[1],scale = 13, angles = 'xy',color='r')
+                simulation_plot.quiver(self.discrete_location[0], self.discrete_location[1],  direction_vector[0], direction_vector[1],scale = 10, angles = 'xy',color='r')
                 locstr = f'{self.discrete_location},{self.angle:.0f}°'
                 simulation_plot.text(self.discrete_location[0]+5, self.discrete_location[1],locstr) # str(i))
                 locstr = f'{angle_to_target:.0f}°'
                 simulation_plot.text(5, 5,locstr) # str(i))
                 # simulation_plot.text(self.discrete_location[0], self.discrete_location[1],r'salut')
+                simulation_plot.invert_yaxis()
 
 
                 # 2. Replot the polar histogram
@@ -206,8 +219,8 @@ class Robot:
 
                 # 3. Replot the histogram_grid
                 histogram_grid_active_region = self.path_planner.histogram_grid.get_histogram_grid_active_region(active_region_min_x, active_region_min_y, active_region_max_x, active_region_max_y)
-                # print('active region histogram =')
-                # print(*histogram_grid_active_region, sep='\n')
+                print('active region histogram =')
+                print(*histogram_grid_active_region, sep='\n')
                 histogram_grid_plot.clear()
                 histogram_grid_plot.matshow(histogram_grid_active_region, origin="upper")
 

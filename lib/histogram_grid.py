@@ -74,8 +74,14 @@ class HistogramGrid:
     def get_certainty_at_discrete_point(self, discrete_point):
         """
         Returns the certainty of an object being present at the given node
+        TODO check why some obstacle aren't detected / reported: 
+        # pblm with discretization?
         """
         discrete_x, discrete_y = discrete_point
+        # print(f'histogram_grid:{discrete_point}')
+        # print(f'histogram_grid:{self.histogram_grid[discrete_y-1][discrete_x-1]}')
+        # print(f'histogram_grid:{self.histogram_grid[discrete_y][discrete_x-1]}')
+        # print(f'histogram_grid:{self.histogram_grid[discrete_y-1][discrete_x]}')
         # return self.histogram_grid[discrete_x][discrete_y]
         return self.histogram_grid[discrete_y][discrete_x]
 

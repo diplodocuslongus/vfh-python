@@ -184,6 +184,8 @@ class PathPlanner:
         return self.histogram_grid.get_obstacles()
 
     def get_best_angle(self, robot_to_target_angle):
+        # computes the angle (heading) to follow in order to avoid the obstacle
+        # angles are CW, with the origin along OX (so +90° is pointing down, toward positve OY)
         print(f'self.get_sectors()={self.get_sectors()}' )
         rotttt,sectors,sector_indx,nb_sectors = self.get_sectors()
         print(f'path_planner: get_best_angle: ')
@@ -201,8 +203,9 @@ class PathPlanner:
             # mid_angle = np.median(sector_indx)*10 # for test, 10° for 36 bins
             # move away from the sector (the obstacle)
 
-            direction_angle = 0.5 * (sector_indx[0][1]*10 -180- robot_to_target_angle / math.pi * 180)
-            return direction_angle
+            direction_angle = (360 - sector_indx[0][1]*10 )
+            # direction_angle = 0.5 * (360 - sector_indx[0][1]*10 - robot_to_target_angle / math.pi * 180)
+            return  direction_angle
 
         angles = []
         for sector in sectors:
