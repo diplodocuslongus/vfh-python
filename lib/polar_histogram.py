@@ -89,16 +89,16 @@ class PolarHistogram:
 
 
     def smooth_histogram(self, l):
-        """Smoothing function that smooths the values of the histogram using a moving average."""
+        """Smooths the values of the histogram using a moving average with a window of length l."""
         smoothed_histogram = [0] * self.num_bins
-        print(f'smooth_histo, smooth parameter l={l}')
+        # print(f'smooth_histo, smooth parameter l={l}')
         for k_i in range(self.num_bins):
-            print(k_i)
-            print(f'{[self.get(l_i) for l_i in range(k_i-l+1, k_i+l)]}')
+            # print(k_i)
+            # print(f'{[self.get(l_i) for l_i in range(k_i-l+1, k_i+l)]}')
 
             smoothed_histogram[k_i] = sum([(l - abs(k_i-l_i)) * self.get(l_i) for l_i in range(k_i-l+1, k_i+l)]) / (2*l+1)
 
-        print(f'smooth_histo result, {smoothed_histogram}')
+        print(f'polar_histogram: smooth_histo result, {smoothed_histogram}')
         self._polar_histogram = smoothed_histogram
 
     # new: shift (wraps) the histogram around a desired angle (ex: target direction)
@@ -113,7 +113,7 @@ class PolarHistogram:
 
     def get_angle_certainty(self):
         """Instead of (bin_index, certainty), return (angle, certainty) pairs."""
-        shifted_polar_histo = self.rotate_histogram(90)
+        shifted_polar_histo = self.rotate_histogram(0)
         # shifted_polar_histo = self.rotate_histogram(self._polar_histogram,90)
         return [(i * self.bin_width, certainty) for i, certainty in enumerate(shifted_polar_histo)]
         # return [(i * self.bin_width, certainty) for i, certainty in enumerate(self._polar_histogram)]

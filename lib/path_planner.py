@@ -6,6 +6,7 @@ is no reason that
 """
 import warnings
 import math
+import numpy as np
 from itertools import groupby
 from operator import itemgetter
 
@@ -95,6 +96,17 @@ class PathPlanner:
     def get_filtered_polar_histogram(self):
         '''
         returns:
+            the thresholded polar_histogram with values of certainty lower than the valley_threshold            equal to zero
+        '''
+        print("path_planner: unfiltered _polar_histogram =", *(f"{x:.1f}" for x in self.polar_histogram._polar_histogram))
+        filtered = np.array(self.polar_histogram._polar_histogram)
+        filtered[filtered < self.valley_threshold] = 0.0
+        print("path_planner: filtered < %s =" % self.valley_threshold, filtered)
+        return filtered
+
+    def get_filtered_polar_histogram_orig(self):
+        '''
+        returns:
             the indices for which the certainty is lower than the valley_threshold
         '''
         print("path_planner: unfiltered _polar_histogram =", *(f"{x:.1f}" for x in self.polar_histogram._polar_histogram))
@@ -104,24 +116,130 @@ class PathPlanner:
         print("path_planner: filtered < %s =" % self.valley_threshold, filtered)
         return filtered
 
-    def get_sectors_from_filtered_polar_histogram(self, filtered_polar_histogram):
+    def get_sectors_from_filtered_polar_histogram_(self, filtered_polar_histogram):
         #  extract sectors (groups of consecutive non-zero elements) from the circular histogram
         # TODO: each sector needs to be sorted by wrapped angle.
         # this may not be doing what is expected....
         return [list(map(itemgetter(1), g)) for k, g in groupby(enumerate(filtered_polar_histogram), lambda ix: ix[0] - ix[1])]
 
-    def get_sectors(self):
+    def get_sectors_from_filtered_polar_histogram(self, filtered_polar_histogram):
+        #  extract sectors (groups of consecutive non-zero elements) from the circular histogram
+        return [list(map(itemgetter(1), g)) for k, g in groupby(enumerate(filtered_polar_histogram), lambda ix: ix[0] - ix[1])]
+
+    # vectorized extract the sectors
+    def extract_nonzero_sectors_np_(self,arr):
+        is_non_zero = arr != 0
+        # Pad with False at both ends to detect edges
+        padded = np.pad(is_non_zero.astype(int), (1, 1), constant_values=0)
+        diffs = np.diff(padded)
+
+        # Sector starts where diff == 1, ends where diff == -1
+        starts = np.where(diffs == 1)[0]
+        ends = np.where(diffs == -1)[0]
+
+        sectors = [arr[start:end].tolist() for start, end in zip(starts, ends)]
+        return sectors
+
+    def extract_nonzero_sectors_np(self,arr):
+        is_non_zero = arr != 0
+        padded = np.pad(is_non_zero.astype(int), (1, 1), constant_values=0)
+        diffs = np.diff(padded)
+
+        starts = np.where(diffs == 1)[0]
+        ends = np.where(diffs == -1)[0]
+
+        # Sector values and indices
+        sectors = [arr[start:end].tolist() for start, end in zip(starts, ends)]
+        sector_indices = [(start, end - 1) for start, end in zip(starts, ends)]  # inclusive end
+
+        return sectors, sector_indices
+
+
+    def get_sectors_(self):
         filtered_polar_histogram = self.get_filtered_polar_histogram()
         sectors = self.get_sectors_from_filtered_polar_histogram(
             filtered_polar_histogram)
         return sectors
 
+    def get_sectors(self, desired_angle=0.0):
+        filtered_polar_histogram = self.get_filtered_polar_histogram()
+        print(f'filtered_polar_histogram = {filtered_polar_histogram}')
+        n_bins = len(filtered_polar_histogram)
+        bin_size = 360 / n_bins
+        desired_index = round(desired_angle / bin_size) % n_bins
+
+        # if all(v == 0 for v in filtered_polar_histogram):
+        if np.all(filtered_polar_histogram == 0):
+            return [0.0] * n_bins, [],[],0
+
+        # rotated = filtered_polar_histogram[-desired_index:] + filtered_polar_histogram[:-desired_index]
+        rotated = np.roll(filtered_polar_histogram, desired_index)
+        # Get sectors (consecutive non-zero sequences)
+        sectors,sectors_indx = self.extract_nonzero_sectors_np(rotated)
+        sector_count = len(sectors)
+        return rotated, sectors, sectors_indx, sector_count
+
+
     def get_obstacles(self):
         return self.histogram_grid.get_obstacles()
 
     def get_best_angle(self, robot_to_target_angle):
+        print(f'self.get_sectors()={self.get_sectors()}' )
+        rotttt,sectors,sector_indx,nb_sectors = self.get_sectors()
+        print(f'path_planner: get_best_angle: ')
+        print(f'\tnb sectors ={nb_sectors} sectors,sectors_indx ={sectors,sector_indx}')
+        if nb_sectors == 0:
+            # no sector or certainty lower than threshold, follow heading to target as if no obstacle
+            return robot_to_target_angle/ math.pi * 180
+
+        # Edge Case: there is only one sector and whole histogram < valley threshold. 
+        # So simply follow angle = angle to target
+        if nb_sectors == 1:
+            print(f"path_planner: one sector")
+            # get middle of the sector from the start and end index of the sector
+            # mid_angle = sector_indx[1]*10 # for test, 10° for 36 bins
+            # mid_angle = np.median(sector_indx)*10 # for test, 10° for 36 bins
+            # move away from the sector (the obstacle)
+
+            direction_angle = 0.5 * (sector_indx[0][1]*10 -180- robot_to_target_angle / math.pi * 180)
+            return direction_angle
+
+        angles = []
+        for sector in sectors:
+            if nb_sectors > self.s_max:
+                # Case 1: Wide valley. Include only s_max bins.
+                # k_n is the bin closest to the target direction
+                if abs(sector[0] - robot_to_target_angle) > abs(sector[-1] - robot_to_target_angle):
+                    k_n = 0
+                    k_f = k_n + self.s_max - 1
+                else:
+                    k_n = nb_sectors - 1
+                    k_f = k_n - self.s_max + 1
+
+            else:
+                # Case 2: Narrow valley. Include all bins.
+                # Order doesn't matter.
+                k_n = sector[0]
+                k_f = sector[-1]
+
+            # print("k_n =", k_n)
+            # print("k_f =", k_f)
+            angle = (self.polar_histogram.get_middle_angle_of_bin(
+                k_n) + self.polar_histogram.get_middle_angle_of_bin(k_f)) / 2
+            # print("path_planner: angle =", angle)
+            angles.append(angle)
+
+        # print("robot_to_target_angle =", robot_to_target_angle)
+        distances = [(angle, abs(robot_to_target_angle - angle))
+                     for angle in angles]
+        # print("path_planner: distances =", distances)
+        smallest_distances = sorted(distances, key=itemgetter(1))
+        # print("path_planner: smallest_distances =", smallest_distances)
+        return smallest_distances[0][0]
+
+    def get_best_angle_(self, robot_to_target_angle):
         sectors = self.get_sectors()
-        print(f'path_planner: get_best_angle: nb sectors ={len(sectors)}')
+        print(f'path_planner: get_best_angle: ')
         print(f'\tnb sectors ={len(sectors)} get_best_angle: sectors ={sectors}')
         if len(sectors) == 0:
             # raise ValueError('path_planner: the entire histogram is a valley, given valley threshold ' + str(self.valley_threshold))
@@ -173,8 +291,7 @@ class PathPlanner:
         smallest_distances = sorted(distances, key=itemgetter(1))
         # print("path_planner: smallest_distances =", smallest_distances)
         return smallest_distances[0][0]
-
-    def print_histogram(self):
+    def print_polar_histogram(self):
         print('path_planner: print PolarHistogram:')
         print(self.polar_histogram)
 

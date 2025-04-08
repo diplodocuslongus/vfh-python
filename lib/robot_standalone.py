@@ -74,7 +74,7 @@ class Robot:
     # 3. Given position at 0, draw simulation at t=0,
     # 4. Now move from t=0 to t=1 by only updating the robot's position.
     def step(self, draw=True):
-        self.print_histogram()
+        self.print_polar_histogram()
         self.update_angle() # angle: Null (or optionally, t-1) => t
         # self.set_velocity() # velocity: Null (or optionally, t-1) => t
         print("robot: step: best angle =", self.angle )
@@ -192,8 +192,8 @@ class Robot:
             for i in range(num_steps):
                 self.step()
 
-    def print_histogram(self):
-        self.path_planner.print_histogram()
+    def print_polar_histogram(self):
+        self.path_planner.print_polar_histogram()
 
 
     def get_polar_bins(self):

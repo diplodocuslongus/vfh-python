@@ -1,20 +1,14 @@
 # Vector Field Histogram - Python Implementation
 
-Author: Zhanwen (Phil) Chen
+Vector Field Histogram is a robot obstacle avoidance and path planning algorithm. 
 
-Vector Field Histogram is a robot path planning algorithm. We originally
-implemented this algorithm in C++ in [VectorFieldHistogramTesting](https://github.com/vanderbiltrobotics/VectorFieldHistogramTesting).
+This is a fork of i[vfh-python](https://github.com/vanderbiltrobotics/vfh-python) orignally by Zhanwen (Phil) Chen.
 
-We reimplement VFH because the original C++ implementation contains a
-mystery bug, rendering it unusable. We suspect that the bug may be a result
-of wrong C++ pointers, and Python helps avoid such idiosyncracies. Another
-consideration is that Phil sucks at C++ but no one sucks at Python.
+Modifications include cleanup, various fixes, standalone animation, "better" plots (subjective!), comments... Also rewrote the sector determination and consequent path planning (i.e. direction of navigation).
 
-"What about production?" You ask. Python can be compiled into C++ code with
-`Cython`, and there are other possible hacks to jam this into ROSMOD.
+The main purpose is to learn how the VFH algorithm operates for obstacle avoidance and (simple) path planning.
+
+Some definitions and notions used in the VFH algorithm and in the code:
+- sector: a group of consecutive bins (modulo 2pi) in the polar histogram in which the certainty of an obstacle is non zero
 
 
-# TODOs
-
-- [x] (Fixed) BUG: Histogram grid active region is upside down. Potential cause: have been using \[x\]\[y\] but should have been \[y\]\[x\] (it was the plotting x.append(y))
-- [] FIXME: Polar Histogram pie chart switch angle and maybe counterclockwise.

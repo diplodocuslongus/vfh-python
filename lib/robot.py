@@ -22,7 +22,7 @@ from lib.polar_histogram import PolarHistogram
 class Robot:
     def __init__(self, histogram_grid, polar_histogram, init_location, target_location, init_speed):
         # CHANGED: we shouldn't need polar_histogram, only histogram_grid
-        self.path_planner = PathPlanner(histogram_grid, polar_histogram, init_location, target_location,mov_avg_l=7)
+        self.path_planner = PathPlanner(histogram_grid, polar_histogram, init_location, target_location,mov_avg_l=1)
         self.target_location = target_location
         self.location = init_location
         self.discrete_location = init_location
@@ -74,7 +74,7 @@ class Robot:
     # 3. Given position at 0, draw simulation at t=0,
     # 4. Now move from t=0 to t=1 by only updating the robot's position.
     def step(self, draw=True):
-        self.print_histogram()
+        self.print_polar_histogram()
         self.update_angle() # angle: Null (or optionally, t-1) => t
         # self.set_speed() # speed: Null (or optionally, t-1) => t
         print("\nrobot: step: best angle =", self.angle )
@@ -162,15 +162,17 @@ class Robot:
                 active_region_min_x, active_region_min_y, active_region_max_x, active_region_max_y = self.path_planner.histogram_grid.get_active_region(self.location)
                 rectangle.set_bounds(active_region_min_x, active_region_min_y, active_region_max_x - active_region_min_x, active_region_max_y - active_region_min_y)
                 # Draw direction vector from current location to target
-                angle_to_target = math.atan2(self.discrete_location[1]/self.target_location[1],self.discrete_location[0]/self.target_location[0])
+                angle_to_target = math.atan2(self.discrete_location[1]-self.target_location[1],self.discrete_location[0]-self.target_location[0])
                 # direction_vector = np.array([np.sin(angle_to_target), np.cos(angle_to_target)])
                 direction_vector = np.array([np.cos(angle_to_target), np.sin(angle_to_target)])
-                simulation_plot.quiver(self.discrete_location[0], self.discrete_location[1],  direction_vector[0], direction_vector[1], scale = 10,angles = 'xy', color='g')
+                simulation_plot.quiver(self.discrete_location[0], self.discrete_location[1],  direction_vector[0], direction_vector[1], scale = 5,angles = 'xy', color='g')
                 # Draw adjustment direction vector taking into account obstacle
                 direction_vector = np.array([np.cos(self.angle*3.14/180.0), np.sin(self.angle*3.14/180.0)])
-                simulation_plot.quiver(self.discrete_location[0], self.discrete_location[1],  direction_vector[0], direction_vector[1], angles = 'xy',color='r')
-                locstr = f'{self.discrete_location}'
+                simulation_plot.quiver(self.discrete_location[0], self.discrete_location[1],  direction_vector[0], direction_vector[1],scale = 13, angles = 'xy',color='r')
+                locstr = f'{self.discrete_location},{self.angle:.0f}°'
                 simulation_plot.text(self.discrete_location[0]+5, self.discrete_location[1],locstr) # str(i))
+                locstr = f'{angle_to_target:.0f}°'
+                simulation_plot.text(5, 5,locstr) # str(i))
                 # simulation_plot.text(self.discrete_location[0], self.discrete_location[1],r'salut')
 
 
@@ -184,7 +186,7 @@ class Robot:
                 # bin_percentages = [1.0/num_bins for angle, certainty in polar_histogram_by_angle]
                 bin_angles = [angle for angle, _ in polar_histogram_by_angle]
                 bin_certainties = [certainty for angle, certainty in polar_histogram_by_angle]
-                print(f'bin_percentages {bin_percentages}')
+                # print(f'bin_percentages {bin_percentages}')
                 polar_histogram_plot.clear()
                 polar_histogram_plot.bar(bin_angles,bin_certainties,width=10)
                 colors = ['blue' if certainty < valley_threshold else 'red' for angle, certainty in polar_histogram_by_angle]
@@ -218,8 +220,8 @@ class Robot:
                 display.display(plt.gcf())
 
 
-    def print_histogram(self):
-        self.path_planner.print_histogram()
+    def print_polar_histogram(self):
+        self.path_planner.print_polar_histogram()
 
 
     def get_polar_bins(self):

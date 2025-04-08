@@ -90,6 +90,14 @@ class HistogramGrid:
         return continuous_distance
 
     @classmethod
+    def get_angle_between_discrete_points_(cls, discrete_start, discrete_end):
+        """
+        Returns the angle between the 2 points in the regular XY referential system (OX is horizontal pointing right)
+        """
+        # discrete_displacement = get_discrete_displacement(discrete_start, discrete_end)
+        ang = np.arctan2(discrete_end[1]-discrete_start[1],discrete_end[0]-discrete_start[0])
+        return np.rad2deg(ang  % (2 * np.pi))
+        # return np.rad2deg(ang) # % (2 * np.pi))
     def get_angle_between_discrete_points(cls, discrete_start, discrete_end):
         """
         Returns the angle between the line between pos2 and posRef and the horizontal along positive i direction.
@@ -99,12 +107,6 @@ class HistogramGrid:
         ang1 = np.arctan2(*discrete_start[::-1])
         ang2 = np.arctan2(*discrete_end[::-1])
         return np.rad2deg((ang1 - ang2) % (2 * np.pi))
-        # delta_x, delta_y = discrete_displacement
-        # # print("histogram_grid: (delta_x, delta_y) =", discrete_displacement)
-        #
-        # angle_radian = math.atan2(delta_y, delta_x)
-        # angle_degrees = math.degrees(angle_radian)
-        # return angle_degrees
 
     def get_active_region(self, robot_location):
         # REVIEW: the four coordinates are discrete?
