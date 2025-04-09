@@ -44,6 +44,7 @@ class Robot:
 
 
     def update_angle(self):
+        # the original coding is a bit weird, kinda bloated
         continuous_displacement = (self.target_location[0] - self.location[0], self.target_location[1] - self.location[1])
         continuous_robot_to_target_angle = math.atan2(continuous_displacement[1], continuous_displacement[0])
         self.angle = self.path_planner.get_best_angle(continuous_robot_to_target_angle)
@@ -83,7 +84,7 @@ class Robot:
         self.print_polar_histogram()
         self.update_angle() # angle: Null (or optionally, t-1) => t
         # self.set_speed() # speed: Null (or optionally, t-1) => t
-        print("\nrobot: step: best angle =", self.angle )
+        print("\nrobot: step(): best angle =", self.angle )
         self.update_velocity()
         self.update_location() # position: t => t+1
 

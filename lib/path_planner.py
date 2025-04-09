@@ -163,7 +163,7 @@ class PathPlanner:
 
     def get_sectors(self, desired_angle=0.0):
         filtered_polar_histogram = self.get_filtered_polar_histogram()
-        print(f'filtered_polar_histogram = {filtered_polar_histogram}')
+        # print(f'filtered_polar_histogram = {filtered_polar_histogram}')
         n_bins = len(filtered_polar_histogram)
         bin_size = 360 / n_bins
         desired_index = round(desired_angle / bin_size) % n_bins
@@ -186,10 +186,11 @@ class PathPlanner:
     def get_best_angle(self, robot_to_target_angle):
         # computes the angle (heading) to follow in order to avoid the obstacle
         # angles are CW, with the origin along OX (so +90° is pointing down, toward positve OY)
-        print(f'self.get_sectors()={self.get_sectors()}' )
+        # print(f'self.get_sectors()={self.get_sectors()}' )
         rotttt,sectors,sector_indx,nb_sectors = self.get_sectors()
         print(f'path_planner: get_best_angle: ')
         print(f'\tnb sectors ={nb_sectors} sectors,sectors_indx ={sectors,sector_indx}')
+        bin_angle = 360 / len(self.polar_histogram._polar_histogram) # size of each bins in degree
         if nb_sectors == 0:
             # no sector or certainty lower than threshold, follow heading to target as if no obstacle
             return robot_to_target_angle/ math.pi * 180
@@ -203,7 +204,14 @@ class PathPlanner:
             # mid_angle = np.median(sector_indx)*10 # for test, 10° for 36 bins
             # move away from the sector (the obstacle)
 
-            direction_angle = (180 - sector_indx[0][1]*10 )
+            # direction_angle = 0.5*(+ sector_indx[0][1]* bin_angle + robot_to_target_angle / math.pi * 180)
+            direction_angle = (0.5*( sector_indx[0][0]+sector_indx[0][1])* bin_angle)
+            if direction_angle >0 and direction_angle <= 180:
+                direction_angle = 180 - direction_angle
+            elif direction_angle > 180: # obstacle is behind TODO take into account target direction!
+                direction_angle = robot_to_target_angle / math.pi * 180 
+
+            # direction_angle = (-180 + sector_indx[0][1]* bin_angle)
             # direction_angle = (360 - sector_indx[0][1]*10 )
             # direction_angle = 0.5 * (360 - sector_indx[0][1]*10 - robot_to_target_angle / math.pi * 180)
             return  direction_angle
