@@ -74,6 +74,46 @@ class HistogramGrid:
     def get_certainty_at_discrete_point(self, discrete_point):
         """
         Returns the certainty of an object being present at the given node
+        To avoid non detection due to discretization of continous location, 
+        we search int he neighborhood of the current (discrete) location
+        """
+        grid_np = np.array(self.histogram_grid)
+        rows, cols = grid_np.shape
+        neighborhood = []
+        found_one = 0
+
+        # Define the relative coordinates of the neighbors (including diagonals)
+        neighbor_offsets = np.array([
+            [-1, -1], [-1, 0], [-1, 1],
+            [ 0, -1],          [0, 1],
+            [1, -1],  [1, 0],  [1, 1]
+        ])
+
+        # Add the center location to the offsets to get neighbor coordinates
+        col, row = discrete_point
+        # discrete_x, discrete_y = discrete_point
+        neighbor_coords = np.array([row, col]) + neighbor_offsets
+
+        # Filter out-of-bounds coordinates
+        valid_mask = (
+            (neighbor_coords[:, 0] >= 0) & (neighbor_coords[:, 0] < rows) &
+            (neighbor_coords[:, 1] >= 0) & (neighbor_coords[:, 1] < cols)
+        )
+        valid_neighbor_coords = neighbor_coords[valid_mask]
+        # print(valid_neighbor_coords,valid_mask)
+
+        # Use advanced indexing to get the values of the valid neighbors
+        neighborhood = grid_np[valid_neighbor_coords[:, 0], valid_neighbor_coords[:, 1]] #.tolist()
+        # neighborhood = grid_np[valid_neighbor_coords[:, 0], valid_neighbor_coords[:, 1]].tolist()
+        if 1 in neighborhood:
+            found_one = 1
+
+        return found_one # self.histogram_grid[discrete_y][discrete_x]
+
+
+    def get_certainty_at_discrete_point_orig(self, discrete_point):
+        """
+        Returns the certainty of an object being present at the given node
         TODO check why some obstacle aren't detected / reported: 
         # pblm with discretization?
         """
@@ -96,15 +136,18 @@ class HistogramGrid:
         return continuous_distance
 
     @classmethod
-    def get_angle_between_discrete_points_(cls, discrete_start, discrete_end):
+    def get_angle_between_discrete_points(cls, discrete_start, discrete_end):
         """
         Returns the angle between the 2 points in the regular XY referential system (OX is horizontal pointing right)
         """
         # discrete_displacement = get_discrete_displacement(discrete_start, discrete_end)
-        ang = np.arctan2(discrete_end[1]-discrete_start[1],discrete_end[0]-discrete_start[0])
+        # ang = np.arctan2(discrete_end[1]-discrete_start[1],discrete_end[0]-discrete_start[0])
+        ang = math.atan2(discrete_end[1]-discrete_start[1],discrete_end[0]-discrete_start[0])
+        # ang= math.atan2(self.target_location[1]-self.discrete_location[1],self.target_location[0]-self.discrete_location[0]) *180/3.14
         return np.rad2deg(ang  % (2 * np.pi))
         # return np.rad2deg(ang) # % (2 * np.pi))
-    def get_angle_between_discrete_points(cls, discrete_start, discrete_end):
+    
+    def get_angle_between_discrete_points_(cls, discrete_start, discrete_end):
         """
         Returns the angle between the line between pos2 and posRef and the horizontal along positive i direction.
         """

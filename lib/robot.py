@@ -155,6 +155,7 @@ class Robot:
             display.display(plt.gcf())
 
 
+        # loop over the required steps
         for i in range(num_steps):
             print(f'STEP {i}/{num_steps}')
             self.step()
@@ -164,6 +165,14 @@ class Robot:
                 # TODO: no need to get the obstacles at every steps! Do it once and for all(?)
                 obstacles_x, obstacles_y = self.path_planner.histogram_grid.get_obstacles()
                 simulation_plot.clear()
+                rectangle = simulation_plot.add_patch(
+                    patches.Rectangle(
+                        (active_region_min_x, active_region_min_y),
+                        active_region_max_x - active_region_min_x,
+                        active_region_max_y - active_region_min_y,
+                        fill=False
+                    )
+                )
                 paths_robot = simulation_plot.scatter(*self.location, color='blue')
                 paths_target = simulation_plot.scatter(*self.path_planner.target_location, color='green')
                 paths_obstacles = simulation_plot.scatter(obstacles_x, obstacles_y, color='red')
@@ -171,9 +180,12 @@ class Robot:
                 rectangle.set_bounds(active_region_min_x, active_region_min_y, active_region_max_x - active_region_min_x, active_region_max_y - active_region_min_y)
                 # Draw direction vector from current location to target
                 # angle_to_target = math.atan2(self.target_location[1]-self.discrete_location[1],self.target_location[0]-self.discrete_location[0])
-                angle_to_target = self.path_planner.histogram_grid.get_angle_between_discrete_points( self.discrete_location, self.target_location)
-                angle_to_target = self.angle
+                # angle_to_target = self.path_planner.histogram_grid.get_angle_between_discrete_points( self.discrete_location, self.target_location)
+                # print(f'INFO: angle_to_target = {angle_to_target}')
+                angle_to_target = math.atan2(self.target_location[1]-self.discrete_location[1],self.target_location[0]-self.discrete_location[0]) *180/3.14
                 print(f'INFO: angle_to_target = {angle_to_target}')
+                # angle_to_target = self.angle
+                # print(f'INFO: angle_to_target = {angle_to_target}')
                 # angle_to_target = self.path_planner.histogram_grid.get_angle_between_discrete_points( self.target_location, self.discrete_location)
                 # direction_vector = np.array([np.sin(angle_to_target), np.cos(angle_to_target)])
                 direction_vector = np.array([np.cos(angle_to_target*3.14/180.0), np.sin(angle_to_target*3.14/180.0)])

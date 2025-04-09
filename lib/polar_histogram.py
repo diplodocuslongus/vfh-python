@@ -1,4 +1,8 @@
 """
+Added:
+    untracked addition see github commit history
+
+    desired_angle : angle to rotate the polar_histogram around
 polar_histogram.py
 
 A polar histogram is defined as follows, assuming bin_width=36
@@ -99,7 +103,15 @@ class PolarHistogram:
             smoothed_histogram[k_i] = sum([(l - abs(k_i-l_i)) * self.get(l_i) for l_i in range(k_i-l+1, k_i+l)]) / (2*l+1)
 
         print(f'polar_histogram: smooth_histo result, {smoothed_histogram}')
-        self._polar_histogram = smoothed_histogram
+        # TODO here: rotate the smoothed histogram
+        bin_size = 360 // self.num_bins
+        desired_angle = 0 # 180
+        shift = desired_angle // bin_size
+
+        if 0:
+            self._polar_histogram = smoothed_histogram
+        else:
+            self._polar_histogram = smoothed_histogram[shift:] + smoothed_histogram[:shift]
 
     # new: shift (wraps) the histogram around a desired angle (ex: target direction)
     def rotate_histogram(self, desired_angle=90):
@@ -114,6 +126,7 @@ class PolarHistogram:
     def get_angle_certainty(self):
         """Instead of (bin_index, certainty), return (angle, certainty) pairs."""
         shifted_polar_histo = self.rotate_histogram(0)
+        # shifted_polar_histo = self.rotate_histogram(180)
         # shifted_polar_histo = self.rotate_histogram(self._polar_histogram,90)
         return [(i * self.bin_width, certainty) for i, certainty in enumerate(shifted_polar_histo)]
         # return [(i * self.bin_width, certainty) for i, certainty in enumerate(self._polar_histogram)]

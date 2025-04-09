@@ -203,7 +203,8 @@ class PathPlanner:
             # mid_angle = np.median(sector_indx)*10 # for test, 10° for 36 bins
             # move away from the sector (the obstacle)
 
-            direction_angle = (360 - sector_indx[0][1]*10 )
+            direction_angle = (180 - sector_indx[0][1]*10 )
+            # direction_angle = (360 - sector_indx[0][1]*10 )
             # direction_angle = 0.5 * (360 - sector_indx[0][1]*10 - robot_to_target_angle / math.pi * 180)
             return  direction_angle
 
