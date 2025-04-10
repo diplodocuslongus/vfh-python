@@ -68,8 +68,8 @@ class Robot:
         self.location = (old_x + velocity_x, old_y + velocity_y)
         # self.location = (old_x * math.cos(angle_radian)+ velocity_x, old_y * math.sin(angle_radian)+ velocity_y)
 
-        # Why does path_planner need discrete location?
-        self.discrete_location = self.path_planner.histogram_grid.continuous_point_to_discrete_point(self.location)
+        # not sure Why path_planner need discrete location?
+        self.discrete_location = self.path_planner.histogram_grid.continuous_to_discrete(self.location)
         print(f"robot: location,discrete_location = ",end="")
         print(f'{self.location,self.discrete_location}')
         self.path_planner.set_robot_location(self.discrete_location)
@@ -184,7 +184,11 @@ class Robot:
                 # angle_to_target = self.path_planner.histogram_grid.get_angle_between_discrete_points( self.discrete_location, self.target_location)
                 # print(f'INFO: angle_to_target = {angle_to_target}')
                 angle_to_target = math.atan2(self.target_location[1]-self.discrete_location[1],self.target_location[0]-self.discrete_location[0]) *180/3.14
+                distance_to_target =  np.linalg.norm(np.array(self.target_location)-np.array(self.discrete_location))
                 print(f'INFO: angle_to_target = {angle_to_target}')
+                print(f'INFO: distance_to_target = {distance_to_target}')
+                if distance_to_target <= 1:
+                    break
                 # angle_to_target = self.angle
                 # print(f'INFO: angle_to_target = {angle_to_target}')
                 # angle_to_target = self.path_planner.histogram_grid.get_angle_between_discrete_points( self.target_location, self.discrete_location)

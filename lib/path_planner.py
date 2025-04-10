@@ -30,7 +30,7 @@ class PathPlanner:
         self.set_target_discrete_location(target_location)
         self.th_certainty = th_certainty
         self.b = b
-        self.mov_avg_l = mov_avg_l
+        self.mov_avg_l = mov_avg_l # moving average parameter to smooth polar_histogram
         self.s_max = s_max
         self.valley_threshold = valley_threshold
         self.target_location = target_location
@@ -39,7 +39,6 @@ class PathPlanner:
         self.set_robot_location(robot_location)
 
 #     //TODO: Add ability to dynamically set certainty value
-#     //TODO This function may be deprecated as we restructure the robot code for ROSMOD
     def set_robot_location(self, robot_location):
         """new_location: a tuple (x, y)."""
         # self.histogram_grid.set_robot_location(robot_location)
@@ -140,6 +139,92 @@ class PathPlanner:
         sectors = [arr[start:end].tolist() for start, end in zip(starts, ends)]
         return sectors
 
+    def extract_sectors_wrap(self,polar_histogram):
+        """
+        Finds contiguous sectors of non-zero values in a polar histogram,
+        considering wrapping around 360 degrees, preserving original order,
+        and identifying the center based on the maximum value.
+
+        Args:
+            polar_histogram: A list or numpy array representing the polar histogram.
+
+        Returns:
+            A tuple containing:
+                - num_sectors: The number of sectors found.
+                - sectors: A list of lists, where each inner list contains the
+                  non-zero values of a sector in their original order.
+                - sector_centers: A list of integer indices representing the center
+                  of each sector (index of the maximum value, floor of average if ties).
+        """
+        n = len(polar_histogram)
+        non_zero_indices = np.where(np.array(polar_histogram) > 0)[0]
+
+        if not non_zero_indices.size:
+            return 0, [], []
+
+        sectors = []
+        sector_indices = []
+        sector_centers = []
+        processed = [False] * n
+
+        for i in non_zero_indices:
+            if processed[i]:
+                continue
+
+            current_sector_values = []
+            indices_in_sector = []
+            queue = [i]
+            processed[i] = True
+
+            while queue:
+                current_index = queue.pop(0)
+                current_sector_values.append(polar_histogram[current_index])
+                indices_in_sector.append(current_index)
+
+                neighbors = [(current_index - 1) % n, (current_index + 1) % n]
+                for neighbor in neighbors:
+                    if not processed[neighbor] and polar_histogram[neighbor] > 0:
+                        processed[neighbor] = True
+                        queue.append(neighbor)
+
+            if current_sector_values:
+                # Sort indices to get the original order within the sector
+                sorted_indices = sorted(indices_in_sector)
+                ordered_sector = [polar_histogram[idx] for idx in sorted_indices]
+                sectors.append(ordered_sector)
+                sector_indices.append((min(indices_in_sector), max(indices_in_sector)))
+
+                # Find the center index (index of the maximum value)
+                max_value = max(current_sector_values)
+                max_indices_in_original = [sorted_indices[idx] for idx, val in enumerate(current_sector_values) if val == max_value]
+                center_index = int(np.floor(np.mean(max_indices_in_original)))
+                sector_centers.append(center_index)
+
+        # Handle potential wrap-around merging and center update
+        if len(sectors) > 1 and sector_indices[0][0] == 0 and sector_indices[-1][1] == n - 1:
+            if (sector_indices[0][0] - sector_indices[-1][1]) % n <= 1 or \
+               (sector_indices[-1][0] - sector_indices[0][1]) % n <= 1:
+                merged_sector = list(polar_histogram[sector_indices[-1][0]:sector_indices[-1][1]+1]) + list(polar_histogram[sector_indices[0][0]:sector_indices[0][1]+1])
+                sectors = [merged_sector]
+                sector_indices = [(sector_indices[-1][0], sector_indices[0][1])]
+                max_value_merged = max(merged_sector)
+                max_indices_merged = [i % n for i, val in enumerate(polar_histogram * 2) if val == max_value_merged and ((i >= sector_indices[-1][0] and i <= sector_indices[-1][1]) or (i >= sector_indices[0][0] + n and i <= sector_indices[0][1] + n))]
+                center_index_merged = int(np.floor(np.mean(max_indices_merged))) % n
+                sector_centers = [center_index_merged]
+            else:
+                # If not merging, ensure the first sector starts at the lower index
+                if sector_indices[0][0] > sector_indices[-1][0]:
+                    sectors = [sectors[-1]] + sectors[:-1]
+                    sector_centers = [sector_centers[-1]] + sector_centers[:-1]
+        elif sectors and sector_indices[0][0] > sector_indices[-1][0]:
+            # Reorder if the first detected sector has a higher starting index due to wrap-around
+            sectors = [sectors[-1]] + sectors[:-1]
+            sector_centers = [sector_centers[-1]] + sector_centers[:-1]
+
+
+        num_sectors = len(sectors)
+        return num_sectors, sectors, sector_centers
+
     def extract_nonzero_sectors_np(self,arr):
         is_non_zero = arr != 0
         padded = np.pad(is_non_zero.astype(int), (1, 1), constant_values=0)
@@ -161,7 +246,7 @@ class PathPlanner:
             filtered_polar_histogram)
         return sectors
 
-    def get_sectors(self, desired_angle=0.0):
+    def get_sectors_(self, desired_angle=0.0):
         filtered_polar_histogram = self.get_filtered_polar_histogram()
         # print(f'filtered_polar_histogram = {filtered_polar_histogram}')
         n_bins = len(filtered_polar_histogram)
@@ -180,6 +265,22 @@ class PathPlanner:
         return rotated, sectors, sectors_indx, sector_count
 
 
+    def get_sectors(self, desired_angle=0.0):
+        filtered_polar_histogram = self.get_filtered_polar_histogram()
+        n_bins = len(filtered_polar_histogram)
+        bin_size = 360 / n_bins
+        desired_index = round(desired_angle / bin_size) % n_bins
+
+        # if all(v == 0 for v in filtered_polar_histogram):
+        if np.all(filtered_polar_histogram == 0):
+            return [0.0] * n_bins, [],[],0
+
+        # rotated = filtered_polar_histogram[-desired_index:] + filtered_polar_histogram[:-desired_index]
+        rotated = np.roll(filtered_polar_histogram, desired_index)
+        # print(f'filtered_polar_histogram = {filtered_polar_histogram}')
+        # Get sectors (consecutive non-zero sequences)
+        sector_count, sectors, sectors_indx = self.extract_sectors_wrap( filtered_polar_histogram)
+        return rotated, sectors, sectors_indx, sector_count
     def get_obstacles(self):
         return self.histogram_grid.get_obstacles()
 
@@ -205,7 +306,9 @@ class PathPlanner:
             # move away from the sector (the obstacle)
 
             # direction_angle = 0.5*(+ sector_indx[0][1]* bin_angle + robot_to_target_angle / math.pi * 180)
-            direction_angle = (0.5*( sector_indx[0][0]+sector_indx[0][1])* bin_angle)
+            # sector_indx has the max value
+            direction_angle = (( sector_indx[0])* bin_angle)
+            # direction_angle = (0.5*( sector_indx[0][0]+sector_indx[0][1])* bin_angle)
             if direction_angle >0 and direction_angle <= 180:
                 direction_angle = 180 - direction_angle
             elif direction_angle > 180: # obstacle is behind TODO take into account target direction!

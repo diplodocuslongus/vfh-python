@@ -63,7 +63,7 @@ class Robot:
         self.location = (old_x + velocity_x, old_y + velocity_y)
 
         # path_planner needs discrete location
-        discrete_location = self.path_planner.histogram_grid.continuous_point_to_discrete_point(self.location)
+        discrete_location = self.path_planner.histogram_grid.continuous_to_discrete(self.location)
         print("robot: discrete_location =", discrete_location)
         self.path_planner.set_robot_location(discrete_location)
 

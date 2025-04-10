@@ -40,9 +40,9 @@ class HistogramGrid:
         return hg
 
 
-    def continuous_point_to_discrete_point(self, continuous_point):
+    def continuous_to_discrete(self, continuous_point):
         """
-        Calculates in which node an object exists based on the continuous (exact) coordinates
+        convert continuous point to discrete 
         Returns a discrete point
         Args:
             continuous_point: A tuple ()
@@ -66,7 +66,7 @@ class HistogramGrid:
             continuous_point: the continuous point at which object is located.
             certainty: certainty value to set.
         """
-        discrete_x, discrete_y = self.continuous_point_to_discrete_point(continuous_point)
+        discrete_x, discrete_y = self.continuous_to_discrete(continuous_point)
         # self.histogram_grid[discrete_x][discrete_y] = certainty
         self.histogram_grid[discrete_y][discrete_x] = certainty
 
